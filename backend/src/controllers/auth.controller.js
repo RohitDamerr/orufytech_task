@@ -1,45 +1,51 @@
-import Admin from "../models/Admin.js";
-import bcrypt from "bcryptjs";
+import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 
-export const signup = async (req, res) => {
-  const { email, password } = req.body;
+export const sendOtp = async (req, res) => {
+  const { identifier } = req.body;
+  const otp = Math.floor(10000 + Math.random() * 90000).toString();
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
+  let user = await User.findOne({ identifier });
+  if (!user) user = await User.create({ identifier });
 
-  try {
-    const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
-      return res.status(400).json({ message: "Admin already exists" });
-    }
+  user.otp = otp;
+  user.otpExpiry = Date.now() + 5 * 60 * 1000;
+  await user.save();
 
-    const admin = await Admin.create({ email, password });
-
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
-      expiresIn: "1d"
-    });
-
-    res.status(201).json({ token, admin: { id: admin._id, email: admin.email } });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Email already exists" });
-    }
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
+  console.log("OTP:", otp); // (SMS/Email service in real app)
+  res.json({ message: "OTP sent" });
 };
 
-export const login = async (req, res) => {
-  const { email, password } = req.body;
+export const sendLoginOtp = async (req, res) => {
+  const { identifier } = req.body;
+  
+  // Check if user exists
+  const user = await User.findOne({ identifier });
+  if (!user) {
+    return res.status(404).json({ 
+      message: "User not found. Please sign up first.",
+      code: "USER_NOT_FOUND"
+    });
+  }
 
-  const admin = await Admin.findOne({ email });
-  if (!admin) return res.status(401).json({ message: "Invalid credentials" });
+  const otp = Math.floor(10000 + Math.random() * 90000).toString();
+  user.otp = otp;
+  user.otpExpiry = Date.now() + 5 * 60 * 1000;
+  await user.save();
 
-  const match = await bcrypt.compare(password, admin.password);
-  if (!match) return res.status(401).json({ message: "Invalid credentials" });
+  console.log("OTP:", otp); // (SMS/Email service in real app)
+  res.json({ message: "OTP sent" });
+};
 
-  const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+export const verifyOtp = async (req, res) => {
+  const { identifier, otp } = req.body;
+  const user = await User.findOne({ identifier });
+
+  if (!user || user.otp.toString() !== otp.toString() || user.otpExpiry < Date.now()) {
+    return res.status(400).json({ message: "Invalid OTP" });
+  }
+
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "1d"
   });
 
