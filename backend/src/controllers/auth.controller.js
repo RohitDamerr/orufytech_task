@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { sendOtpEmail } from "../utils/emailService.js";
 
 // Generate secure 6-digit numeric OTP
 const generateOtp = () => {
@@ -12,12 +13,23 @@ const generateOtp = () => {
   return (100000 + (randomNumber % 900000)).toString();
 };
 
+// Email validation helper
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 export const sendOtp = async (req, res) => {
   try {
     const { identifier } = req.body;
 
     if (!identifier) {
-      return res.status(400).json({ message: "Email or phone number is required" });
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Validate that identifier is an email
+    if (!isValidEmail(identifier)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
     }
 
     // Generate 6-digit OTP
@@ -36,10 +48,16 @@ export const sendOtp = async (req, res) => {
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    // Log OTP to console (for development/testing)
-    console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
-    
-    res.json({ message: "OTP sent" });
+    // Send OTP via email
+    try {
+      await sendOtpEmail(identifier, otp);
+      res.json({ message: "OTP sent to your email" });
+    } catch (emailError) {
+      console.error("Failed to send email, OTP logged to console:", emailError.message);
+      // Fallback: log to console if email fails
+      console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
+      res.json({ message: "OTP sent (check console if email failed)" });
+    }
   } catch (error) {
     console.error("Error sending OTP:", error);
     res.status(500).json({ message: "Failed to send OTP. Please try again." });
@@ -51,7 +69,12 @@ export const sendLoginOtp = async (req, res) => {
     const { identifier } = req.body;
 
     if (!identifier) {
-      return res.status(400).json({ message: "Email or phone number is required" });
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    // Validate that identifier is an email
+    if (!isValidEmail(identifier)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
     }
   
     // Check if user exists
@@ -74,10 +97,16 @@ export const sendLoginOtp = async (req, res) => {
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    // Log OTP to console (for development/testing)
-    console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
-    
-    res.json({ message: "OTP sent" });
+    // Send OTP via email
+    try {
+      await sendOtpEmail(identifier, otp);
+      res.json({ message: "OTP sent to your email" });
+    } catch (emailError) {
+      console.error("Failed to send email, OTP logged to console:", emailError.message);
+      // Fallback: log to console if email fails
+      console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
+      res.json({ message: "OTP sent (check console if email failed)" });
+    }
   } catch (error) {
     console.error("Error sending login OTP:", error);
     res.status(500).json({ message: "Failed to send OTP. Please try again." });
