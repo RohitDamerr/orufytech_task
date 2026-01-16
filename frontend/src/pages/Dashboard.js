@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { getProducts, createProduct, updateProduct, deleteProduct, togglePublishProduct } from "../api/productApi";
 import AddProductModal from "../components/AddProductModal";
-import ProductCard from "../components/ProductCard";
 import ProductGrid from "../components/ProductGrid";
 
 export default function Dashboard() {
-  const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -17,13 +15,12 @@ export default function Dashboard() {
   const [successMessage, setSuccessMessage] = useState("");
   const navigate = useNavigate();
 
-  const loadProducts = async (search = "", tab = "Published") => {
+  const loadProducts = useCallback(async (search = "", tab = "Published") => {
     try {
       setLoading(true);
       setError("");
       const published = tab === "Published";
       const data = await getProducts(search, published);
-      setProducts(data);
       setFilteredProducts(data);
     } catch (err) {
       if (err.response?.status === 401) {
@@ -35,7 +32,7 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
 
   const handleAdd = async (productData) => {
     try {
@@ -147,6 +144,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadProducts("", activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
