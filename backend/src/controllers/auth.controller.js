@@ -1,7 +1,6 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { sendOtpEmail } from "../utils/emailService.js";
 
 // Generate secure 6-digit numeric OTP
 const generateOtp = () => {
@@ -48,15 +47,15 @@ export const sendOtp = async (req, res) => {
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    // Respond immediately without waiting for email
-    res.json({ message: "OTP sent to your email" });
+    // Log OTP to console/terminal
+    console.log("\n" + "=".repeat(50));
+    console.log(`📧 OTP for ${identifier}:`);
+    console.log(`🔑 OTP Code: ${otp}`);
+    console.log(`⏰ Expires in: 5 minutes`);
+    console.log("=".repeat(50) + "\n");
 
-    // Send OTP via email asynchronously (non-blocking)
-    sendOtpEmail(identifier, otp).catch((emailError) => {
-      console.error("Failed to send email, OTP logged to console:", emailError.message);
-      // Fallback: log to console if email fails
-      console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
-    });
+    // Respond immediately
+    res.json({ message: "OTP sent to your email" });
   } catch (error) {
     console.error("Error sending OTP:", error);
     res.status(500).json({ message: "Failed to send OTP. Please try again." });
@@ -96,15 +95,15 @@ export const sendLoginOtp = async (req, res) => {
     user.otpExpiry = otpExpiry;
     await user.save();
 
-    // Respond immediately without waiting for email
-    res.json({ message: "OTP sent to your email" });
+    // Log OTP to console/terminal
+    console.log("\n" + "=".repeat(50));
+    console.log(`📧 OTP for ${identifier}:`);
+    console.log(`🔑 OTP Code: ${otp}`);
+    console.log(`⏰ Expires in: 5 minutes`);
+    console.log("=".repeat(50) + "\n");
 
-    // Send OTP via email asynchronously (non-blocking)
-    sendOtpEmail(identifier, otp).catch((emailError) => {
-      console.error("Failed to send email, OTP logged to console:", emailError.message);
-      // Fallback: log to console if email fails
-      console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
-    });
+    // Respond immediately
+    res.json({ message: "OTP sent to your email" });
   } catch (error) {
     console.error("Error sending login OTP:", error);
     res.status(500).json({ message: "Failed to send OTP. Please try again." });

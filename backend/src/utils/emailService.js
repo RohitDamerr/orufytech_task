@@ -21,6 +21,13 @@ const getEmailConfig = () => {
       user,
       pass,
     },
+    // Connection timeout settings
+    connectionTimeout: 5000, // 5 seconds
+    greetingTimeout: 5000, // 5 seconds
+    socketTimeout: 5000, // 5 seconds
+    // Enable debug logging
+    debug: process.env.NODE_ENV === 'development',
+    logger: process.env.NODE_ENV === 'development',
   };
 };
 
@@ -88,11 +95,36 @@ export const sendOtpEmail = async (email, otp) => {
       text: `Your OTP code is: ${otp}. This code is valid for 5 minutes.`,
     };
 
-    const info = await emailTransporter.sendMail(mailOptions);
+    // Set a timeout for the email sending operation
+    const sendPromise = emailTransporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Email sending timeout after 10 seconds")), 10000);
+    });
+
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log("OTP email sent successfully to:", email);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Error sending OTP email:", error.message);
+    const errorMsg = error.message || "Unknown error";
+    console.error("Error sending OTP email:", errorMsg);
+    
+    // Provide helpful error messages
+    if (errorMsg.includes("timeout") || errorMsg.includes("ETIMEDOUT")) {
+      console.error("\n⚠️  Email Connection Timeout:");
+      console.error("Possible causes:");
+      console.error("1. Incorrect EMAIL_HOST (should be 'smtp.gmail.com' for Gmail)");
+      console.error("2. Firewall/network blocking SMTP port", process.env.EMAIL_PORT || 587);
+      console.error("3. Wrong EMAIL_PORT (Gmail uses 587 for TLS or 465 for SSL)");
+      console.error("4. EMAIL_SECURE setting mismatch (should be 'false' for port 587, 'true' for port 465)");
+      console.error("5. Gmail requires app password (not regular password) - see: https://support.google.com/accounts/answer/185833\n");
+    } else if (errorMsg.includes("auth") || errorMsg.includes("Invalid login")) {
+      console.error("\n⚠️  Email Authentication Error:");
+      console.error("For Gmail, you need to use an App Password:");
+      console.error("1. Enable 2-Step Verification on your Google Account");
+      console.error("2. Generate an App Password: https://myaccount.google.com/apppasswords");
+      console.error("3. Use the 16-character app password as EMAIL_PASS\n");
+    }
+    
     throw error;
   }
 };
