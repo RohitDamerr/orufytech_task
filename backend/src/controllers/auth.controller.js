@@ -1,53 +1,129 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
+// Generate secure 6-digit numeric OTP
+const generateOtp = () => {
+  // Use crypto for cryptographically secure random number
+  // Generate random bytes and convert to 6-digit number (100000-999999)
+  const randomBytes = crypto.randomBytes(4);
+  const randomNumber = randomBytes.readUInt32BE(0);
+  // Ensure it's exactly 6 digits (100000 to 999999)
+  return (100000 + (randomNumber % 900000)).toString();
+};
 
 export const sendOtp = async (req, res) => {
-  const { identifier } = req.body;
-  const otp = Math.floor(10000 + Math.random() * 90000).toString();
+  try {
+    const { identifier } = req.body;
 
-  let user = await User.findOne({ identifier });
-  if (!user) user = await User.create({ identifier });
+    if (!identifier) {
+      return res.status(400).json({ message: "Email or phone number is required" });
+    }
 
-  user.otp = otp;
-  user.otpExpiry = Date.now() + 5 * 60 * 1000;
-  await user.save();
+    // Generate 6-digit OTP
+    const otp = generateOtp();
+    
+    // Set expiry to 5 minutes (within 3-5 minute standard)
+    const otpExpiry = Date.now() + 5 * 60 * 1000;
 
-  console.log("OTP:", otp);
-  res.json({ message: "OTP sent" });
+    let user = await User.findOne({ identifier });
+    if (!user) {
+      user = await User.create({ identifier });
+    }
+
+    // Store OTP with expiry (unique per request)
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    // Log OTP to console (for development/testing)
+    console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
+    
+    res.json({ message: "OTP sent" });
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    res.status(500).json({ message: "Failed to send OTP. Please try again." });
+  }
 };
 
 export const sendLoginOtp = async (req, res) => {
-  const { identifier } = req.body;
+  try {
+    const { identifier } = req.body;
+
+    if (!identifier) {
+      return res.status(400).json({ message: "Email or phone number is required" });
+    }
   
-  // Check if user exists
-  const user = await User.findOne({ identifier });
-  if (!user) {
-    return res.status(404).json({ 
-      message: "User not found. Please sign up first.",
-      code: "USER_NOT_FOUND"
-    });
+    // Check if user exists
+    const user = await User.findOne({ identifier });
+    if (!user) {
+      return res.status(404).json({ 
+        message: "User not found. Please sign up first.",
+        code: "USER_NOT_FOUND"
+      });
+    }
+
+    // Generate 6-digit OTP
+    const otp = generateOtp();
+    
+    // Set expiry to 5 minutes (within 3-5 minute standard)
+    const otpExpiry = Date.now() + 5 * 60 * 1000;
+
+    // Store OTP with expiry (unique per request)
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+
+    // Log OTP to console (for development/testing)
+    console.log(`OTP for ${identifier}: ${otp} (expires in 5 minutes)`);
+    
+    res.json({ message: "OTP sent" });
+  } catch (error) {
+    console.error("Error sending login OTP:", error);
+    res.status(500).json({ message: "Failed to send OTP. Please try again." });
   }
-
-  const otp = Math.floor(10000 + Math.random() * 90000).toString();
-  user.otp = otp;
-  user.otpExpiry = Date.now() + 5 * 60 * 1000;
-  await user.save();
-
-  console.log("OTP:", otp);
-  res.json({ message: "OTP sent" });
 };
 
 export const verifyOtp = async (req, res) => {
-  const { identifier, otp } = req.body;
-  const user = await User.findOne({ identifier });
+  try {
+    const { identifier, otp } = req.body;
 
-  if (!user || user.otp.toString() !== otp.toString() || user.otpExpiry < Date.now()) {
-    return res.status(400).json({ message: "Invalid OTP" });
+    if (!identifier || !otp) {
+      return res.status(400).json({ message: "Identifier and OTP are required" });
+    }
+
+    const user = await User.findOne({ identifier });
+
+    // Validate OTP: check if user exists, OTP matches, and not expired
+    if (!user || !user.otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otp.toString() !== otp.toString()) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.otpExpiry < Date.now()) {
+      // Clear expired OTP
+      user.otp = undefined;
+      user.otpExpiry = undefined;
+      await user.save();
+      return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+    }
+
+    // OTP is valid - delete it immediately (one-time use)
+    user.otp = undefined;
+    user.otpExpiry = undefined;
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d"
+    });
+
+    res.json({ token });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(500).json({ message: "Failed to verify OTP. Please try again." });
   }
-
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "1d"
-  });
-
-  res.json({ token });
 };
