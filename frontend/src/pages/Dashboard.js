@@ -201,7 +201,7 @@ export default function Dashboard() {
 
         {/* Navigation */}
         <nav style={{ flex: "1" }}>
-          <div 
+          <div
             onClick={handleHomeClick}
             style={{
               marginBottom: "8px",
