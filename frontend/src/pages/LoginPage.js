@@ -51,7 +51,7 @@ export default function Login() {
     newOtp[index] = value.replace(/\D/g, "");
     setOtp(newOtp);
 
-    if (value && index < 4) {
+    if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
