@@ -4,7 +4,7 @@ import { sendLoginOtp, verifyOtp } from "../api/authApi";
 
 export default function Login() {
   const [identifier, setIdentifier] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [step, setStep] = useState("send");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,8 +69,8 @@ export default function Login() {
     setError("");
 
     const otpString = otp.join("");
-    if (otpString.length !== 5) {
-      setError("Please enter the complete 5-digit OTP");
+    if (otpString.length !== 6) {
+      setError("Please enter the complete 6-digit OTP");
       return;
     }
 

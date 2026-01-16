@@ -4,7 +4,7 @@ import { sendOtp, verifyOtp } from "../api/authApi";
 
 export default function Signup() {
   const [identifier, setIdentifier] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [step, setStep] = useState("send");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,7 +47,7 @@ export default function Signup() {
     newOtp[index] = value.replace(/\D/g, "");
     setOtp(newOtp);
 
-    if (value && index < 4) {
+    if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
@@ -65,8 +65,8 @@ export default function Signup() {
     setError("");
 
     const otpString = otp.join("");
-    if (otpString.length !== 5) {
-      setError("Please enter the complete 5-digit OTP");
+    if (otpString.length !== 6) {
+      setError("Please enter the complete 6-digit OTP");
       return;
     }
 
