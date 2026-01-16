@@ -12,7 +12,7 @@ export const sendOtp = async (req, res) => {
   user.otpExpiry = Date.now() + 5 * 60 * 1000;
   await user.save();
 
-  console.log("OTP:", otp); // (SMS/Email service in real app)
+  console.log("OTP:", otp); // 
   res.json({ message: "OTP sent" });
 };
 
@@ -33,7 +33,7 @@ export const sendLoginOtp = async (req, res) => {
   user.otpExpiry = Date.now() + 5 * 60 * 1000;
   await user.save();
 
-  console.log("OTP:", otp); // (SMS/Email service in real app)
+  console.log("OTP:", otp); 
   res.json({ message: "OTP sent" });
 };
 
